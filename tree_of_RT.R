@@ -15,6 +15,12 @@ library(shadowtext)
 library(ggnewscale)
 library(ggrepel)
 
+##Proof_________________________________________________________________________
+
+library(TreeAndLeaf)
+library(RedeR)
+library(igraph)
+
 ##First, we set the directory  where to work____________________________________
 
 setwd("/home/usuario/acca/tree/gy_tree/")
@@ -85,7 +91,7 @@ plot_list(p1, p2, ncol=2, tag_levels = "A")
 p1 <- ggtree(gy_outgroup) + 
   geom_tiplab(offset=.5) +  xlim(0, 10) + theme_tree2()
 
-tree2 = tree_subset(gy_outgroup, 465)
+tree2 = tree_subset(gy_outgroup,"RT_CRM", levels_back = 6)
 
 p2 <- ggtree(tree2, aes(color=group)) +
   scale_color_manual(values = c("black", "red"), guide = 'none') +
@@ -106,48 +112,6 @@ p4 <- ggtree(tree4, aes(color=group)) +
 p5 <- p4 + geom_point(aes(fill = rate), shape = 21, size = 4)
 
 ##______________________________________________________________________________
-
-##Manipulating tree data for vizualization______________________________________
-
-set.seed(1024)
-x <- rtree(30)
-y <- rtree(30)
-p1 <- ggtree(x, layout='roundrect') + 
-  geom_hilight(
-    mapping=aes(subset = node %in% c(38, 48, 58, 36),
-                node = node,
-                fill = as.factor(node)
-    )
-  ) +
-  labs(fill = "clades for tree in left" )
-
-p2 <- ggtree(y)
-
-d1 <- p1$data
-d2 <- p2$data
-
-## reverse x-axis and 
-## set offset to make the tree on the right-hand side of the first tree
-d2$x <- max(d2$x) - d2$x + max(d1$x) + 1
-
-pp <- p1 + geom_tree(data=d2, layout='ellipse') +      
-  ggnewscale::new_scale_fill() +
-  geom_hilight(
-    data = d2, 
-    mapping = aes( 
-      subset = node %in% c(38, 48, 58),
-      node=node,
-      fill=as.factor(node))
-  ) +
-  labs(fill = "clades for tree in right" ) 
-
-dd <- bind_rows(d1, d2) %>% 
-  filter(!is.na(label))
-
-pp + geom_line(aes(x, y, group=label), data=dd, color='grey') +
-  geom_tiplab(geom = 'shadowtext', bg.colour = alpha('firebrick', .5)) +
-  geom_tiplab(data = d2, hjust=1, geom = 'shadowtext', 
-              bg.colour = alpha('firebrick', .5))
 
 ##We are Manipulating our tree data for vizualization___________________________
 #_______________________________________________________________________________
@@ -195,16 +159,47 @@ round_plot <- ggtree(clade_athila, layout="roundrect") +
   ) +
   labs(fill = "clades for tree in left" )+ geom_tippoint(color="#574953", alpha=1/2, size=3)
 
-round_plot2 <- ggtree(clade_athila, layout="roundrect") + 
+nodeid(gy_outgroup, "RT_Diaspora")
+
+round_plot2 <- ggtree(gy_outgroup, layout="roundrect") +
   xlim(NA, 4) +
-  geom_cladelab(node=481, label="Athila clade from db", align=TRUE, 
-                geom='label', fill='lightblue') +
-  geom_cladelab(node=c(465,463), label="Athila/tat clade from db", align=TRUE, 
-                geom='label', fill='lightblack') +
-  geom_tippoint(color="#574953", alpha=1/2, size=3)
+  geom_cladelab(node=716, label="Athila clade from db", align=TRUE, 
+                angle= -30, fill='lightblue', offset = .2, textcolor='lightblue', barcolor='lightblue') +
+  geom_cladelab(node=737, label="Athila/tat clade from db", align=TRUE, 
+                angle= -30, fill='lightgreen', offset = .2, textcolor='lightgreen', barcolor='lightgreen') +
+  geom_cladelab(node= 743, label="Athila/tat Ogre from db", align=TRUE, 
+                angle= 30, fill='purple', offset = .2, textcolor='purple', barcolor='purple') +
+  geom_cladelab(node=7, label="Plant Chromoviruses outgroup", align=TRUE, color='gold', angle= 30, offset = .2, textcolor='gold', barcolor='gold') +
+  geom_tippoint(color="#000000", alpha=1/2, size=1) +
+  geom_hilight(node= 716, fill="lightblue")+
+  geom_hilight(node= 737, fill="lightgreen")+
+  geom_hilight(node= 743, fill="purple")+
+  geom_hilight(node= 7, fill="gold")
 
+pt_data3 <- groupClade(gy_outgroup, c(716, 737, 743))
 
+r_plot3 <- ggtree(pt_data3, layout="roundrect", aes(color=group)) + 
+  theme(legend.position='none')+ 
+  labs(fill = "amino acids letters" ) + 
+  geom_tiplab(size= 2, color="black") +
+  geom_point2(aes(subset=(node==7)), shape=21, size=2, fill='darkorange') +
+  scale_color_manual(values=c("black", 
+                              "deeppink2", 
+                              "goldenrod1", 
+                              "seagreen3"),
+                     labels=c("Acca sellowiana athila/tat", "Ogre athila/tat db", "Athila/tat db", "Athila db"))+ 
+  theme(legend.position = "none") 
 
+r_plot4 <- ggtree(k_datab, layout="roundrect", aes(color=group)) + 
+  theme(legend.position='none')+ 
+  labs(fill = "amino acids letters" ) + 
+  geom_tiplab(size= 2, color="black") +
+  scale_color_manual(values=c("black", 
+                              "deeppink2", 
+                              "goldenrod1", 
+                              "seagreen3"),
+                     labels=c("Acca sellowiana athila/tat", "Ogre athila/tat db", "Athila/tat db", "Athila db"))+ 
+  theme(legend.position = "none") 
 
 ##Displaying nodes/tips_________________________________________________________
 ## We must improve y-axis scale_________________________________________________
@@ -263,19 +258,23 @@ msaplot(cirk_plot,
 
 k_datab <- groupClade(clade_athila, c(463, 465, 481))
 
-ramas_col <- ggtree(k_datab, aes(color=group)) + 
+ramas_col <- ggtree(k_datab, layout="roundrect", aes(color=group)) + 
   theme(legend.position='none')+ 
   labs(fill = "amino acids letters" ) + 
   geom_tiplab(size= 2, color="black") +
   scale_color_manual(values=c("black", 
                               "deeppink2", 
                               "goldenrod1", 
-                              "seagreen3"))+ 
-  theme(legend.position = "right") 
+                              "seagreen3"),
+                     labels=c("Acca sellowiana athila/tat", "Ogre athila/tat db", "Athila/tat db", "Athila db"))+ 
+  theme(legend.position = "none") 
 
 msaplot(ramas_col, 
         fasta="/home/usuario/acca/alignment/alg_rt_branch_athi", 
-        window=c(1, 320))
+        window=NULL,
+        offset = 0,
+        width = 1,
+        color = NULL)
 
 
 

@@ -27,6 +27,7 @@ if ( meet_RT[1,1] == 'Warning: [blastx] Examining 5 or more matches is recommend
   meet_RT <- meet_RT[2:length(meet_RT[,1]),]
 }
 
+
 ##RNaseH________________________________________________________________________
 
 meet_RNaseH <- read.csv("blast_RNaseH_retro_LTR_athila_candidate_1e-5",
@@ -81,6 +82,30 @@ names(meet_LTR)[c(2,3,4,5)] = c("LTR2","LTR3","LTR4","LTR5")
 
 meet_LTR$V1 <- str_c(meet_LTR$V1,"_")
 
+##idOf_extractor fasta__________________________________________________________
+
+meet_idOf_extractor <- read.csv("/home/usuario/Data_Rstudio/tesina_g/tablas/domainLTR/idOf-extractor_need-for-phylogenetics-domain",
+                                sep = "\t",
+                                stringsAsFactors = TRUE,
+                                header = FALSE)
+meet_idOf_extractor$V2 <- substr(meet_idOf_extractor$V1, start = 2, stop = 20)
+
+meet_idOf_extractor$V3 <- meet_idOf_extractor[,1]
+meet_idOf_extractor$V1 <- meet_idOf_extractor[,2]
+meet_idOf_extractor$V2 <- meet_idOf_extractor[,3]
+meet_idOf_extractor <- meet_idOf_extractor[,c(1,2)]
+
+
+meet_idOf_extractor$V3 <- substr(meet_idOf_extractor$V2, start = 23, stop = (nchar(as.character(meet_idOf_extractor$V2))-2))
+
+meet_idOf_extractor$V4 <- str_extract(meet_idOf_extractor$V3, pattern = "(.+?)[:space:]")
+meet_idOf_extractor$V5 <- str_extract(meet_idOf_extractor$V3, pattern = "[:space:](.+)")
+
+meet_idOf_extractor <- head(meet_idOf_extractor, n= 1004)
+meet_idOf_extractor$V4 <- as.numeric(meet_idOf_extractor$V4)
+meet_idOf_extractor$V5 <- as.numeric(meet_idOf_extractor$V5)
+meet_idOf_extractor$lengthLTR <- meet_idOf_extractor$V5 - meet_idOf_extractor$V4
+
 ##Data peak_____________________________________________________________________
 
 summary(meet_RNaseH)
@@ -125,6 +150,7 @@ allDomains_LTR <- inner_join(meet_LTR, allDomains, by="V1")
 
 rmDup_allDomain<- allDomains[!duplicated(allDomains$V1),]
 rmDup_All <- allDomains_LTR[!duplicated(allDomains_LTR$V1),]
+forOnlySeq <- rmDup_All
 
 initScale <- rmDup_All[, c(2,3,4,5)]
 sdLTR5 <- initScale[,4] - initScale[,3]
@@ -146,8 +172,6 @@ rmDup_All[,20] <- ifelse(((rmDup_All[,19]-sd(rmDup_All[,21])) > rmDup_All[,16]),
 
 rmDup_All[,23] <- ifelse(((rmDup_All[,23]-sd(rmDup_All[,25])) > rmDup_All[,20]), round(rmDup_All[,23]-sd(rmDup_All[,25])), rmDup_All[,23]*1)
 
-
-##standard deviation of LTR'5 length HAY QUE VEEER CHEE NO FUNCA ASI
 
 #rmDup_All[,5] <- ifelse((rmDup_All[,5]+sdLTR5) < (rmDup_All[,7]+initScale[,3]), rmDup_All[,5]+(sdLTR5), rmDup_All[,5]*1)
 
@@ -226,7 +250,7 @@ orCatSeq <- catSeq[order(catSeq$molecule),]
 orCatSeq[5] <- ifelse(orCatSeq$start < orCatSeq$end, 'forward', 'reverse')
 names(orCatSeq)[5]= 'strand'  
 
-pruebaChe <- tail(orCatSeq, n= 70)
+pruebaChe <- head(orCatSeq, n= 70)
 
 
 dummies <- make_alignment_dummies(
@@ -264,18 +288,36 @@ map_dbl(rmDup_All[,c(2, 5, 9, 13, 17, 21, 25)], sd)
 map_dbl(rmDup_All[,c(2:5,7:9,11:13,15:17,19:21,23:25)], mean)
 map_dbl(rmDup_All[,c(2:5,7:9,11:13,15:17,19:21,23:25)], sd)
 
+##Process other data_____________________________________________________________
 
+names(forOnlySeq)[c(6,7,8,9)] = c("GAG1","GAG2","GAG3","GAG4")
+names(forOnlySeq)[c(10,11,12,13)] = c("AP1","AP2","AP3","AP4")
+names(forOnlySeq)[c(14,15,16,17)] = c("RT1","RT2","RT3","RT4")
+names(forOnlySeq)[c(18,19,20,21)] = c("RH1","RH2","RH3","RH4")
+names(forOnlySeq)[c(22,23,24,25)] = c("INT1","INT2","INT3","INT4")
+
+forOnlySeq[c(7,8,11,12,15,16,19,20,23,24)] <- c(forOnlySeq$GAG2 + initScale[,3], forOnlySeq$GAG3 + initScale[,3],
+                                                forOnlySeq$AP2 + initScale[,3], forOnlySeq$AP3 + initScale[,3],
+                                                forOnlySeq$RT2 + initScale[,3], forOnlySeq$RT3 + initScale[,3],
+                                                forOnlySeq$RH2 + initScale[,3], forOnlySeq$RH3 + initScale[,3],
+                                                forOnlySeq$INT2 + initScale[,3], forOnlySeq$INT3 + initScale[,3])
+
+forOnlySeq$lengthLTR <- forOnlySeq$LTR3 - forOnlySeq$LTR4
+
+getTrueSeq <- merge(forOnlySeq, meet_idOf_extractor, by = c("V1", "lengthLTR"))
+
+getTrueSeq$V2 <- substr(getTrueSeq$V2, start = 2, stop = 19)
 
 ##Histogram length of GAG athila/tat____________________________________________
 
 plot_GAG_length <- ggplot(rmDup_All, aes(x= GAG4, fill= GAG4)) + 
-  geom_histogram( fill="#ee1289", alpha=0.4, bins = 30)+
-  geom_density(aes(y =..count..*(length(rmDup_All$GAG4))*1.5), adjust = 0.6, col = "black", fill = "#ee1289", alpha= 0.15)+
+  geom_histogram( fill="#43CD80", alpha=0.4, bins = 30)+
+  geom_density(aes(y =..count..*(length(rmDup_All$GAG4))*1.5), adjust = 0.6, col = "black", fill = "#43CD80", alpha= 0.15)+
   theme(legend.position="none",
         plot.title = element_text(size=11), 
         panel.background = element_rect(fill = "white",
                                         colour = "grey50")) +
-  labs(y = length(rmDup_All$GAG4), x = "Length of GAG Athila/tat in Acca sellowiana") 
+  labs(y = "Nº gene", x = "Length of GAG Athila/tat in Acca sellowiana") 
 
 length(rmDup_All$GAG4)
 mean(rmDup_All$GAG4)##There are many trash sequence!!!!!!!
@@ -293,7 +335,7 @@ plot_AP_length <- ggplot(rmDup_All, aes(x= AP4, fill= AP4)) +
         plot.title = element_text(size=11), 
         panel.background = element_rect(fill = "white",
                                         colour = "grey50")) +
-  labs(y = length(rmDup_All$AP4), x = "Length of AP Athila/tat in Acca sellowiana") 
+  labs(y = "Nº gene", x = "Length of AP Athila/tat in Acca sellowiana") 
 
 length(rmDup_All$AP4)
 mean(rmDup_All$AP4)##There are many trash sequence!!!!!!!
@@ -305,13 +347,13 @@ ks.test(rmDup_All$AP4, pnorm, mean(rmDup_All$AP4), sd(rmDup_All$AP4))
 ##Histogram length of RT athila/tat____________________________________________
 
 plot_RT_length <- ggplot(rmDup_All, aes(x= RT4, fill= RT4)) + 
-  geom_histogram( fill="#EEEE00", alpha=0.4, bins = 30)+
-  geom_density(aes(y =..count..*15), adjust = 2, col = "black", fill = "#EEEE00", alpha= 0.15)+
+  geom_histogram( fill="#43CD80", alpha=0.4, bins = 30)+
+  geom_density(aes(y =..count..*15), adjust = 2, col = "black", fill = "#43CD80", alpha= 0.15)+
   theme(legend.position="none",
         plot.title = element_text(size=11), 
         panel.background = element_rect(fill = "white",
                                         colour = "grey50")) +
-  labs(y = length(rmDup_All$RT4), x = "Length of RT Athila/tat in Acca sellowiana") 
+  labs(y = "Nº gene", x = "Length of RT Athila/tat in Acca sellowiana") 
 
 length(rmDup_All$RT4)
 mean(rmDup_All$RT4)##There are many trash sequence!!!!!!!
@@ -322,13 +364,13 @@ ks.test(rmDup_All$RT4, pnorm, mean(rmDup_All$RT4), sd(rmDup_All$RT4))
 ##Histogram length of RH athila/tat_____________________________________________
 
 plot_RH_length <- ggplot(rmDup_All, aes(x= RH4, fill= RH4)) + 
-  geom_histogram( fill="#B452CD", alpha=0.4, bins = 30)+
-  geom_density(aes(y =..count..*15), adjust = 2, col = "black", fill = "#B452CD", alpha= 0.15)+
+  geom_histogram( fill="#43CD80", alpha=0.4, bins = 30)+
+  geom_density(aes(y =..count..*15), adjust = 2, col = "black", fill = "#43CD80", alpha= 0.15)+
   theme(legend.position="none",
         plot.title = element_text(size=11), 
         panel.background = element_rect(fill = "white",
                                         colour = "grey50")) +
-  labs(y = length(rmDup_All$RH4), x = "Length of RH Athila/tat in Acca sellowiana") 
+  labs(y = "Nº gene", x = "Length of RH Athila/tat in Acca sellowiana") 
 
 length(rmDup_All$RH4)
 mean(rmDup_All$RH4)##There are many trash sequence!!!!!!!
@@ -339,13 +381,13 @@ ks.test(rmDup_All$RH4, pnorm, mean(rmDup_All$RH4), sd(rmDup_All$RH4))
 ##Histogram length of INT athila/tat____________________________________________
 
 plot_INT_length <- ggplot(rmDup_All, aes(x= INT4, fill= INT4)) + 
-  geom_histogram( fill="#00C5CD", alpha=0.4, bins = 30)+
-  geom_density(aes(y =..count..*103), adjust = 1, col = "black", fill = "#00C5CD", alpha= 0.15)+
+  geom_histogram( fill="#43CD80", alpha=0.4, bins = 30)+
+  geom_density(aes(y =..count..*103), adjust = 1, col = "black", fill = "#43CD80", alpha= 0.15)+
   theme(legend.position="none",
         plot.title = element_text(size=11), 
         panel.background = element_rect(fill = "white",
                                         colour = "grey50")) +
-  labs(y = length(rmDup_All$INT4), x = "Length of INT Athila/tat in Acca sellowiana") 
+  labs(y = "Nº gene", x = "Length of INT Athila/tat in Acca sellowiana") 
 
 length(rmDup_All$INT4)
 mean(rmDup_All$INT4)##There are many trash sequence!!!!!!!
@@ -357,13 +399,13 @@ ks.test(rmDup_All$INT4, pnorm, mean(rmDup_All$INT4), sd(rmDup_All$INT4))
 ##Histogram length of LTR athila/tat____________________________________________
 
 plot_LTR_length <- ggplot(rmDup_All, aes(x= LTR4, fill= LTR4)) + 
-  geom_histogram( fill="#FF6347", alpha=0.4, bins = 30)+
-  geom_density(aes(y =..count..*1000), adjust = 2, col = "black", fill = "#FF6347", alpha= 0.15)+
+  geom_histogram( fill="#43CD80", alpha=0.4, bins = 30)+
+  geom_density(aes(y =..count..*1000), adjust = 2, col = "black", fill = "#43CD80", alpha= 0.15)+
   theme(legend.position="none",
         plot.title = element_text(size=11), 
         panel.background = element_rect(fill = "white",
                                         colour = "grey50")) +
-  labs(y = length(rmDup_All$LTR4), x = "Length of LTR Athila/tat in Acca sellowiana") 
+  labs(y = "Nº LTR", x = "Length of LTR Athila/tat in Acca sellowiana") 
 
 length(rmDup_All$LTR4)
 mean(rmDup_All$LTR4)##There are many trash sequence!!!!!!!
@@ -378,7 +420,7 @@ grid.arrange(plot_GAG_length, plot_AP_length, plot_RT_length, plot_RH_length, pl
 
 ##Write start and end of genes__________________________________________________
 
-toExtractor_RT <- rmDup_All[,c(1,15,16)]
+toExtractor_RT <- getTrueSeq[,c(27,16,17)]
 colnames(toExtractor_RT)<-NULL
 write.table(toExtractor_RT, "/home/usuario/Data_Rstudio/tesina_g/tablas/domainLTR/toExtractor_RT.txt", row.names = FALSE, sep = "\t", quote = FALSE, qmethod = "double")
 

@@ -47,7 +47,9 @@ gen_length <- ggplot(gy_db_Length, aes(x= genom, y= G.length, fill= genom)) +
         panel.background = element_rect(fill = "white",
                                         colour = "grey50")) +
   labs(y = "Length genome Athila/Tat (pb)", x = "")+
-  scale_fill_viridis_d(option = 'plasma', alpha = 0.7)
+  scale_fill_viridis_d(option = 'plasma', alpha = 0.7) 
+
+
 
 mean(gy_db_Length$G.length)
 sd(gy_db_Length$G.length)
@@ -60,8 +62,7 @@ ltr_length <- ggplot(ltr_db_Length, aes(x= LTR, y= L.length, fill= LTR)) +
         plot.title = element_text(size=11), 
         panel.background = element_rect(fill = "white",
                                         colour = "grey50")) +
-  labs(y = "Length LTR Athila/Tat (pb)", x = "")+
-  scale_fill_viridis_d(option = 'plasma', alpha = 0.7)
+  labs(y = "Length LTR Athila/Tat (pb)", x = "")
 
 mean(ltr_db_Length$L.length)
 sd(ltr_db_Length$L.length)
